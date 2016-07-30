@@ -49,7 +49,7 @@ router.route('/animals').get(function (request, response) {
 			response.status(500).send("Error connecting to DB: " + err.message);
 			return;
 		}
-		connection.execute("SELECT * FROM ANIMALS",function (err, result) {
+		connection.execute("SELECT * FROM ANIMALS ORDER BY COMMON_NAME",function (err, result) {
         if (err) {
           console.error(err.message);
           response.status(500).send("Error getting data from DB");
@@ -70,6 +70,45 @@ router.route('/animals').get(function (request, response) {
      });
 	})
 });
+
+
+router.route('/animals/nearby').get(function (request, response) {
+  var lat = sanitizer.escape(request.query.lat);
+  var lon = sanitizer.escape(request.query.lon);
+
+  oracledb.getConnection(connectionProperties, function (err, connection) {
+    if (err) {
+      console.error(err.message);
+      response.status(500).send("Error connecting to DB: " + err.message);
+      return;
+    }
+    connection.execute("SELECT c.ID, b.COMMON_NAME AS COMMON_NAME, ROUND(AVG(SDO_GEOM.SDO_DISTANCE(a.LOCATION, SDO_GEOMETRY('POINT(" + lon + " " + lat + ")', 4326), 1, 'unit=M'))) as DISTANCE FROM GEO_TEMP a, TOP_OCCURRENCES b, ANIMALS c WHERE SDO_WITHIN_DISTANCE(a.LOCATION,SDO_GEOMETRY('POINT(" + lon + " " + lat + ")', 4326), 'distance=1 unit=KM') ='TRUE' AND b.COMMON_NAME IS NOT NULL AND b.COMMON_NAME = c.COMMON_NAME AND a.OCCURRENCE_NUMBER = b.OCCURRENCE_NUMBER GROUP BY c.ID, b.COMMON_NAME ORDER BY DISTANCE", [], function (err, result) {
+        if (err) {
+          console.error(err.message);
+          response.status(500).send("Error getting data from DB. Probably invalid lat/lon: " + lat + ":" + lon);
+          doRelease(connection);
+          return;
+        }
+        console.log("RESULTSET:" + JSON.stringify(result));
+        var animal = {};
+        if (result.rows.length < 1) {
+          response.status(400).send("No animals found nearby");
+          return;
+        }
+        var animals = [];
+        result.rows.forEach(function (element) {
+          animals.push({ 
+            id: element[0], 
+            name: element[1],
+            distance: element[2]
+          });
+        }, this);
+        response.json(animals);
+        doRelease(connection);
+     });
+  })
+});
+
 
 router.route('/animals/:id').get(function (request, response) {
 	var id = sanitizer.escape(request.params.id);
@@ -95,13 +134,16 @@ router.route('/animals/:id').get(function (request, response) {
         result.rows.forEach(function (element) {
           animal.id = element[0], 
           animal.name = element[1],
-          animal.description =element[2]
+          animal.description = element[2],
+          animal.guid = element[3]
         }, this);
         response.json(animal);
         doRelease(connection);
      });
 	})
 });
+
+
 console.log('App started on', PORT);
 app.use('/', router);
 app.listen(PORT);
