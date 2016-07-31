@@ -8,9 +8,9 @@ var PORT = process.env.PORT || 8089;
 var app = express();
 
 var connectionProperties = {
- 	user: process.env.DBAAS_USER_NAME || "AUSEMON",
-  password: process.env.DBAAS_USER_PASSWORD || "Ausemon1",
-  connectString: process.env.DBAAS_DEFAULT_CONNECT_DESCRIPTOR || "141.145.27.31:1521/PDB1.gse00000535.oraclecloud.internal"
+ 	user: process.env.DBAAS_USER_NAME || "oracle",
+  password: process.env.DBAAS_USER_PASSWORD || "password",
+  connectString: process.env.DBAAS_DEFAULT_CONNECT_DESCRIPTOR || "URL"
 };
 
 function doRelease(connection) {
