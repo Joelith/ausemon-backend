@@ -62,7 +62,9 @@ router.route('/animals').get(function (request, response) {
           animals.push({ 
           	id: element[0], 
           	name: element[1],
-          	description: element[2]
+          	scientific_name: element[2],
+            guid: element[3],
+            description: element[4]
          	});
         }, this);
         response.json({animals: animals});
@@ -132,10 +134,11 @@ router.route('/animals/:id').get(function (request, response) {
         	return;
         }
         result.rows.forEach(function (element) {
-          animal.id = element[0], 
-          animal.name = element[1],
-          animal.description = element[2],
-          animal.guid = element[3]
+          animal.id = element[0];
+          animal.name = element[1];
+          animal.scientific_name = element[2];
+          animal.guid = element[3];
+          animal.description = element[4];
         }, this);
         response.json(animal);
         doRelease(connection);
